@@ -1,0 +1,152 @@
+-- create root folder
+django-admin startproject jetbrains
+cd jetbrains
+--create application
+django-admin startapp movies
+
+
+-- модели
+models.py
+--User зарегистрированное лицо в вашем веб-сервисе, а Groupэто набор Users
+django.contrib.auth.models (User, Group)
+
+
+-- представления  («<имя приложения> / templates / <имя приложения>») - в приложениях
+magazine/
+├── blog
+    └── templates
+        └── blog
+            └── index.html
+└── templates
+    └── base.html
+-- создать каталоги
+mkdir templates
+mkdir -p blog/templates/blog (mkdir movies\templates\movies - windows)
+
+_________________________
+-- контроллер
+-- В urls.py вы определяете маршрутизацию для своей службы. Маршрутизация - это процесс сопоставления ссылок запроса с соответствующими обработчиками представления. Вы можете включать маршруты из файлов " urls.py " один в другой, но основным будет " <имя_проекта> / <имя_проекта> /urls.py" . Если вы хотите создать файлы маршрутизации для каждого приложения, сделайте это и включите их в основное.
+-- В views.py вы определяете обработчики представлений, которые играют роль посредника между моделью и представлением. Обработчик вид функция или класс , который отвечает на запросы. Поскольку связь между клиентом и сервером является реализацией протокола HTTP, обработчик отвечает кодом состояния. Если запрос был успешным, сервер обычно отвечает кодом 200. Если запрашиваемая страница не найдена, будет 404; если сервер не работает - 500. Другие примеры кодов можно найти на https://httpstatuses.com/ .
+magazine/
+├── blog
+     └── views.py
+└── magazine
+      └── urls.py
+
+
+-- Запрос на сайт
+User <-> View <-> Controller  <-> Model
+Теперь, когда вы знаете, как функции разделяются между компонентами, давайте посмотрим, как они взаимодействуют при запросе веб-сайта.
+
+1. Пользователь видит ссылку или кнопку в представлении, нажимает на нее и создает запрос.
+2. Контроллер получает запрос.
+3. Он передает запрос соответствующему обработчику.
+4. Обработчик вызывает методы модели для извлечения объектов из хранилища данных.
+5. Он выбирает шаблон просмотра для отображения ответа.
+6. Пользователь видит ответ.
+
+
+__________________
+--Settings.py - это обычный модуль Python. Разница в том, что в этом файле вы определяете только переменные и не пишете никаких функций или классов. Вы можете найти модуль в каталоге <project_name>
+Настройки:
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+-- BASE_DIR- это имя папки, в которой находится ваш проект в файловой системе. Вам не нужно изменять его, потому что Django предоставляет независимый от ОС способ найти базовый каталог для вашего проекта. Однако вы должны использовать его, если хотите манипулировать включенными файлами. Например, если вы хотите определить имя для файла журнала, это может бытьLOG_FILE = os.path.join(BASE_DIR, 'smithee.logs')
+
+ALLOWED_HOSTS = ['localhost']
+Когда вы запускаете свой сервер на локальном компьютере, вы должны добавить localhost в файл ALLOWED_HOSTS. Localhost - это псевдоним локального адреса вашего компьютера. Но если ваш сервер должен быть доступен через Интернет, вам также необходимо добавить имя вашего веб-хоста. Если вы были в Google, то ALLOWED_HOSTSможет выглядеть следующим образом : ALLOWED_HOSTS = ['www.google.com'].
+
+DATABASES = {}
+Если база данных не используется в нашем приложении, мы можем удалить конфигурацию по умолчанию и сохранить DATABASESкак пустой словарь.
+По умолчанию Django генерирует конфигурацию с базой данных sqlite3 за вас.
+
+
+INSTALLED_APPS
+Необходимо включить свои приложения
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'movies',
+]
+
+
+Объявление переменной
+DIRECTOR = 'Alan Smithee'
+Доступ к переменной:
+django.conf.settings.DIRECTOR
+
+
+Чтобы включить дебаг мод:
+DEBUG = True
+
+
+__________________
+Запуск сервера:
+python manage.py runserver
+python manage.py runserver 9090 (указать на каком порте, если он занят)
+
+
+
+
+
+
+_________________________
+movies/vies.py
+
+___
+Get запрос
+from django.http import HttpResponse, Http404
+from django.views import View
+
+class MainPageView(View):
+    def get(self, request, *args, **kwargs):
+        html =  "\n".join(f"<div>{candy}</div>" for candy in candies)
+        return HttpResponse(html)
+
+
+class CandyView(View):
+    def get(self, request, candy_name, *args, **kwargs):
+        if candy_name not in candies:
+            raise Http404
+
+        candy_info = "".join(
+            f"<tr><td>{key}:</td><td>{value}</td></tr>"
+            for key, value in candies[candy_name].items()
+        )
+        return HttpResponse(f"<table><tbody>{candy_info}</tbody></table>")
+
+
+
+
+
+
+
+
+
+______________________
+jetbrains/urls.py
+
+from django.urls import path, re_path
+from candies.views import MainPageView, CandyView
+
+urlpatterns = [
+    path("candies/", MainPageView.as_view()),
+    re_path("candies/(?P<candy_name>[^/]*)/?", CandyView.as_view()),
+]
+
+For example, if Willy's site has the hostname www.willywonka.com, then the assortment page will be available at the address www.willywonka.com/candies, and information specifically about fudge will be found at www.willywonka.com/candies/Fudge
+Например, если сайт Вилли имеет имя хоста www.willywonka.com , то страница ассортимента будет доступна по адресу www.willywonka.com/candies, а информация о помадке будет найдена на www.willywonka.com/candies/ Фадж .
+
+Во второй ссылке пути мы видим регулярное выражение (?P<candy_name>[^/]*). Это выражение извлекает переменную candy_nameиз ссылки и передает ее обработчику. Вот как мы получили candy_name в предыдущем примере.
+Чтобы привязать ссылку к соответствующему обработчику, мы можем вызвать функции pathили re_pathи добавить результат в urlpatternsсписок. Первый аргумент каждой функции получает строку, описывающую шаблон для ссылки, которая идет после имени хоста. Это может быть простая строка в pathфункции и регулярное выражение в случае re_path. Второй аргумент - это обработчик, который будет обрабатывать запрос.
+
+Порядок ссылок urlpatternsсохраняется, когда Django ищет требуемый обработчик. Если вы вставите регулярное выражение "candies/(?P<candy_name>[^/]*)/?"раньше "candies/", вы никогда не достигнете второго, поскольку "candies/"оно является подмножеством первого регулярного выражения. Поэтому вам следует вставить последнее выражение надмножества в список.
+
+Путь "" (пустая строка) - это расширенный набор для всех маршрутов. Если вы сначала вставите его в список шаблонов URL с помощью call to re_path, все остальные обработчики станут недоступными
+Чтобы обработать запрос в приложении Django, вы должны определить обработчик и реализовать все методы, которые он может обрабатывать. Если вы унаследовали этот класс от класса View, вы должны сопоставить желаемую HTTP-команду с тем же методом в вашем классе. В частности, если вы хотите обработать запрос GET, вы должны определить метод « get » и вернуть экземпляр HttpResponseкласса Django .
+
+После этого вы можете привязать этот обработчик к ссылке, которой он принадлежит. Просто добавьте его в список urlpatternsв модуле urls.py.
