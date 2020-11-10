@@ -7,7 +7,7 @@ django-admin startapp movies
 
 -- модели
 models.py
---User зарегистрированное лицо в вашем веб-сервисе, а Groupэто набор Users
+--User зарегистрированное лицо в вашем веб-сервисе, а Group это набор Users
 django.contrib.auth.models (User, Group)
 
 
@@ -144,9 +144,500 @@ For example, if Willy's site has the hostname www.willywonka.com, then the assor
 Во второй ссылке пути мы видим регулярное выражение (?P<candy_name>[^/]*). Это выражение извлекает переменную candy_nameиз ссылки и передает ее обработчику. Вот как мы получили candy_name в предыдущем примере.
 Чтобы привязать ссылку к соответствующему обработчику, мы можем вызвать функции pathили re_pathи добавить результат в urlpatternsсписок. Первый аргумент каждой функции получает строку, описывающую шаблон для ссылки, которая идет после имени хоста. Это может быть простая строка в pathфункции и регулярное выражение в случае re_path. Второй аргумент - это обработчик, который будет обрабатывать запрос.
 
-Порядок ссылок urlpatternsсохраняется, когда Django ищет требуемый обработчик. Если вы вставите регулярное выражение "candies/(?P<candy_name>[^/]*)/?"раньше "candies/", вы никогда не достигнете второго, поскольку "candies/"оно является подмножеством первого регулярного выражения. Поэтому вам следует вставить последнее выражение надмножества в список.
+Порядок ссылок urlpatterns сохраняется, когда Django ищет требуемый обработчик. Если вы вставите регулярное выражение "candies/(?P<candy_name>[^/]*)/?"раньше "candies/", вы никогда не достигнете второго, поскольку "candies/"оно является подмножеством первого регулярного выражения. Поэтому вам следует вставить последнее выражение надмножества в список.
 
 Путь "" (пустая строка) - это расширенный набор для всех маршрутов. Если вы сначала вставите его в список шаблонов URL с помощью call to re_path, все остальные обработчики станут недоступными
 Чтобы обработать запрос в приложении Django, вы должны определить обработчик и реализовать все методы, которые он может обрабатывать. Если вы унаследовали этот класс от класса View, вы должны сопоставить желаемую HTTP-команду с тем же методом в вашем классе. В частности, если вы хотите обработать запрос GET, вы должны определить метод « get » и вернуть экземпляр HttpResponseкласса Django .
 
 После этого вы можете привязать этот обработчик к ссылке, которой он принадлежит. Просто добавьте его в список urlpatternsв модуле urls.py.
+
+
+
+
+
+
+
+
+
+
+Базы данных:
+sqlite3 --version
+Чтобы сообщить Django, что это специальный класс, который отображает свою структуру в таблицу базы данных, мы наследуем класс Teamfrom django.models.Model. Также у нас есть игроки и игровые столы. Сделаем заглушки для наших классов в модуле Tournament / models.py
+Tournament / models.py
+from django.db import models
+
+
+class Team(models.Model):
+    name = ...
+
+
+class Player(models.Model):
+    height= ...
+    name = ...
+    team = ...
+
+
+class Game(models.Model):
+    date = ...
+    home_team = ...
+    home_team_points = ...
+    rival_team = ...
+    rival_team_points = ...
+
+Чтобы получить большинство возможностей базы данных, мы используем специальные классы Fields . Они отображают атрибут класса в конкретный столбец в таблице базы данных.
+class Team(models.Model):
+    name = models.CharField(max_length=64)
+CharFieldпохожа на строку Python, но имеет одно ограничение: ограничение длины.
+
+В каждой команде есть игроки. Определим модель игрока:
+class Player(models.Model):
+    height = models.FloatField()
+    name = models.CharField(max_length=64)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+
+ограничение on_delete=models.CASCADEозначает, что если команда будет удалена из базы данных, она будет удалена вместе со всеми игроками.
+
+class Game(models.Model):
+    home_team = models.ForeignKey(Team, related_name='game_at_home', on_delete=models.CASCADE)
+    home_team_points = models.IntegerField()
+    rival_team = models.ForeignKey(Team, related_name='rival_game', on_delete=models.CASCADE)
+    rival_team_points = models.IntegerField()
+    date = models.DateField()
+
+
+Документация Relationships
+docs.djangoproject.com/en/2.2/topics/db/models/#relationships
+
+
+Миграции
+Добавьте турнир INSTALLED_APPSв модуль quidditch / settings.py
+INSTALLED_APPS = [
+    # other installed apps
+    'tournament',
+]
+
+В нашем коде есть схема лиги, мы готовы перенести ее в базу данных. Это требует двух шагов:
+python manage.py makemigrations
+python manage.py migrate
+Первая команда создает миграции. Миграция - это фрагмент кода, который описывает, какие действия должны быть выполнены в базе данных для синхронизации моделей с таблицами. Вы можете найти созданный код в файле
+tournament/migrations/0001_initital.py
+На втором этапе мы применяем изменения и запускаем сгенерированные команды.
+
+Предшествующая manage.py <command>с pythonплатформо-независимый способ запустить любую команду Джанго. Это допустимый синтаксис как для систем Unix, так и для Windows.
+
+Если вы хотите выполнить, а затем применить миграции к определенному приложению в своем проекте, вы должны добавлять имя приложения после каждой команды:
+python manage.py makemigrations tournament
+python manage.py migrate tournament
+
+Когда вы запустите эти команды, ваша база данных наконец получит таблицы для работы. Мы готовы наполнить их реальными данными!
+
+Пример:
+from django.db import models
+# from django.db.models import CharField, ForeignKey, IntegerField
+
+
+class Team(models.Model):
+    name = models.CharField(max_length=64)
+
+    class Meta:
+        app_label = 'tournament'
+
+
+class League(models.Model):
+    name = models.CharField(max_length=32)
+    champion = models.ForeignKey(Team, related_name='champion_of', on_delete=models.CASCADE)
+    number_of_teams = models.IntegerField()
+
+    class Meta:
+        app_label = 'tournament'
+
+
+
+
+
+
+
+Диспетчер объектов модели
+создаем модели Teamи Playerвот как мы их определяем:
+from django.db import models
+
+
+class Team(models.Model):
+    name = models.CharField(max_length=64)
+
+
+class Player(models.Model):
+    height= models.FloatField()
+    name = models.CharField(max_length=64)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+
+
+team_model_manager = Team.objects
+player_model_manager = Player.objects
+
+не обязательно , чтобы дать имя псевдонима для менеджера, вы можете использовать его методы просто так: Team.objects.filter(name="Ballycastle Bats"). Вы можете выбрать то, что вам больше нравится, но для наглядности мы будем обращаться к нему прямо во всех примерах
+
+Этот небольшой фрагмент поможет вам заполнить таблицы данными:
+falmouth_falcons = Team.objects.create(name="Falmouth Falcons")
+montrose_magpies = Team.objects.create(name="Montrose Magpies")
+
+Player.objects.create(name="Karl Broadmoor", height=180, team=falmouth_falcons)
+Player.objects.create(name="Kevin Broadmoor", height=183, team=falmouth_falcons)
+Player.objects.create(name="Alasdair Maddock", height=175, team=montrose_magpies)
+Player.objects.create(name="Lennox Campbell", height=197, team=montrose_magpies)
+
+
+Мы уверены, что у нас есть команда под названием «Falmouth Falcons». Попробуем получить с помощью Менеджера:
+falcons = Team.objects.get(name="Falmouth Falcons")
+Ели команды не существует - ошибка
+try:
+    tornados = Team.objects.get(name="Tutshill Tornados")
+except Team.DoesNotExist:
+    ...
+
+
+
+Попробуем получить аккаунт игрока Karl Broadmoor из базы данных:
+karl_broadmoor = Player.objects.get(name="Karl Broadmoor")
+
+
+Карл играет за Falmouth Falcons, поэтому мы получаем его аккаунт без ошибок, но предположим, что вы хотите сделать запрос, который возвращает несколько объектов:
+falcons = Team.objects.get(name="Falmouth Falcons")
+falcon_player = Player.objects.get(team=falcons)
+Вы получите не игрока, а Player.MultipleObjectsReturnedисключение.
+
+
+_______________
+Как и стандартная функция фильтра Python , метод фильтра Manager возвращает только те объекты, которые соответствуют запросу. Вам не обязательно изначально знать, сколько объектов он вернет, поэтому это безопаснее, чем метод get .
+tornados = Team.objects.filter(name="Tutshill Tornados")
+
+Хотя в базе данных нет Tornados, никаких исключений не возникает. Так в чем же разница между этими двумя методами? Ответ - тип возвращаемого значения. Метод get всегда возвращает экземпляр конкретной модели, а метод фильтра возвращает QuerySet .
+
+QuerySet - это оболочка для набора объектов в базе данных. QuerySet и Manager имеют много общего, поэтому вы можете легко преобразовать одно в другое. Вы можете думать о QuerySet как о другом типе Менеджера.
+Чтобы получить объект из QuerySet, вы можете перебрать его или получить элемент по индексу, как вы получаете его из Python list.
+tornados = Team.objects.filter(name="Tutshill Tornados")
+if len(tornados) == 1:
+    tornados_team = tornados[0]
+
+Также мы хотим получить игрока «Falmouth Falcons». Сделаем это с помощью комбинации методов filter и first :
+falcons = Team.objects.get(name="Falmouth Falcons")
+falcon_player = Player.objects.filter(team=falcons).first()
+
+Последняя ошибка, которую следует учитывать, заключается в том, что first() метод не вызывает никаких исключений: если объекты не найдены, он возвращается None. Поэтому перед доступом к каким-либо свойствам объекта убедитесь, что это не так None.
+
+
+
+
+_______________________
+Field lookups
+from django.db import models
+
+
+class Team(models.Model):
+    name = models.CharField(max_length=64)
+
+
+class Game(models.Model):
+    home_team = models.ForeignKey(Team, related_name='game_at_home', on_delete=models.CASCADE)
+    home_team_points = models.IntegerField()
+    rival_team = models.ForeignKey(Team, related_name='rival_game', on_delete=models.CASCADE)
+    rival_team_points = models.IntegerField()
+    date = models.DateField()
+
+Заполним часть данных:
+from datetime import date
+
+falmouth_falcons = Team.objects.create(name="Falmouth Falcons")
+montrose_magpies = Team.objects.create(name="Montrose Magpies")
+tutshill_tornados = Team.objects.create(name="Tutshill Tornados")
+appleby_arrows = Team.objects.create(name="Appleby Arrows")
+
+Game.objects.create(home_team=falmouth_falcons, home_team_points=15,
+                    rival_team=montrose_magpies, rival_team_points=12, date=date(1674, 5, 6))
+
+Game.objects.create(home_team=falmouth_falcons, home_team_points=34,
+                    rival_team=tutshill_tornados, rival_team_points=8, date=date(1774, 9, 30))
+
+Game.objects.create(home_team=appleby_arrows, home_team_points=10,
+                    rival_team=montrose_magpies, rival_team_points=19, date=date(1779, 7, 15))
+
+Game.objects.create(home_team=tutshill_tornados, home_team_points=7,
+                    rival_team=appleby_arrows, rival_team_points=27, date=date(2018, 6, 25))
+
+Game.objects.create(home_team=montrose_magpies, home_team_points=24,
+                    rival_team=tutshill_tornados, rival_team_points=16, date=date(1907, 5, 12))
+
+!!!Remember that you should migrate your models before using it!
+
+При фильтрации данных мы ищем объекты, удовлетворяющие какому-либо условию. Exclude , напротив, позволяет нам удалять объекты из QuerySet по условию. Сравните два запроса:
+# All home games for Falmouth Falcons
+Game.objects.filter(home_team=falmouth_falcons)
+
+# All games excluding games where Falmouth Falcons was a home team
+Game.objects.exclude(home_team=falmouth_falcons)
+
+
+Фильтровать объекты только по их точному значению не очень удобно: вы можете захотеть получить объекты, удовлетворяющие более сложному условию. Например, это могут быть все матчи по квиддичу ХХ века или все игры, в которых хозяева поля набрали более 12 очков. Начнем с этого запроса:
+great_score_at_home_games = Game.objects.filter(home_team_points__gt=12)
+
+Специальный синтаксис для параметра: имя поля, двойное подчеркивание, поиск по полю. Поиск по полю - это специальное имя для действий со значением поля, которые вы хотите выполнить при фильтрации данных. Поиск « g t » - это сокращение слова « больше», поэтому вы можете прочитать этот запрос как «фильтровать игры, в которых команда хозяев набрала более 12 очков».
+
+Давайте посмотрим на другой пример:
+from datetime import date
+
+twentieth_century_games = Game.objects.filter(
+    date__gte=date(1900, 1, 1), date__lte=date(1999, 12, 31)
+)
+Поиск " gte " похож на " gt "; разница в том, что « gte » означает, что значение поля может быть больше или равно заданному. Соответственно, « lte » означает меньше или равно .
+
+Мы могли бы написать наш запрос с использованием другого помощника:
+twentieth_century_games = Game.objects.filter(date__year__gte=1900, date__year__lte=1999)
+Поиск по году доступен только для DateFieldи DateTimeField; мы не можем использовать его просто так IntegerFieldили CharFieldпотому, что в этом нет никакого смысла.
+
+Мы могли бы написать наш запрос более естественно:
+twentieth_century_games = Game.objects.filter(date__year__range=(1900, 1999))
+Правило синтаксиса для поиска любого поля простое: добавьте двойное подчеркивание перед его использованием. Связывая их, каждый раз добавляйте двойные подчеркивания. Диапазон означает, что мы ищем значения между двумя предоставленными границами.
+!!!Настоятельно рекомендуется не использовать двойные подчеркивания в именах полей. Вы должны назвать все поля так же, как и все переменные Python - соедините части одним знаком подчеркивания.
+
+
+Django позволяет нам использовать коллекцию в наших запросах. Конечно, мы можем отфильтровать все домашние игры по Falmouth Falcons и Montrose Magpies, исключив все другие варианты:
+special_home_games = Game.objects.exclude(home_team=tutshill_tornados) \
+                                 .exclude(home_team=appleby_arrows)
+
+Но что мы будем делать, когда у нас будет больше условий? Следует ли нам применить наши глубокие навыки копирования и вставки или сделать еще один умный ход? Мы предлагаем вам сделать выбор в пользу последнего. Давайте воспользуемся списком Python, чтобы отфильтровать то, что нам нужно:
+special_home_games = Game.objects.filter(home_team__in=[falmouth_falcons, montrose_magpies])
+
+
+К настоящему моменту вы можете отфильтровать некоторые данные и использовать их для другого запроса. Во-первых, у нас falmouth_falconsесть переменная. Затем мы можем отфильтровать игры, в которых «Соколы» были хозяевами поля. Но нужно ли нам хранить его в переменной, чтобы сделать запрос? В этом нет необходимости, потому что мы можем получить доступ к полям внешних ключей напрямую через поиск.
+falcons_home_games = Game.objects.filter(home_team__name="Falmouth Falcons")
+Вы снова используете двойное подчеркивание, и это работает. Теперь конструкция выглядит так: имя поля внешнего ключа, двойные подчеркивания, поле модели внешнего ключа.
+
+
+Чтобы погрузиться глубже, давайте объединим доступ к полю внешней модели с полевыми поисками:
+falcons_home_games = Game.objects.filter(home_team__name__contains="Falcons")
+Двойное подчеркивание аналогично доступу через точку, поля аналогичны атрибутам класса, а поиск - методам класса. Таким образом, вы можете комбинировать их так же, как вы можете комбинировать доступ через точку.
+Будьте осторожны и не создавайте слишком сложных запросов с большим количеством двойных подчеркиваний: достаточно двух пар. Если вы используете больше, время может значительно увеличиться или ваша база данных будет использовать много памяти для этого запроса.
+
+!!!!Документация
+https://docs.djangoproject.com/en/2.2/ref/models/querysets/#field-lookups
+!!!! __contains - содержит не полностью
+
+Пример:
+class Engine(models.Model):
+    type = models.CharField(max_length=32)
+    volume = models.IntegerField()
+
+
+class Car(models.Model):
+    color = models.CharField(max_length=32)
+    engine = models.ForeignKey(Engine, on_delete=models.CASCADE)
+    speed = models.FloatField()
+
+Filter cars which have the "vee" type of engine with volume less then or equal to 300. The result should be a QuerySet object.
+vee_engine_cars = Car.objects.filter(engine__type='vee').filter(engine__volume__lte=300)
+vee_engine_cars = Car.objects.filter(engine__type__contains="vee", engine__volume__lte=300) - второй вариант
+
+
+
+
+_________________
+Object modification with ORM
+__
+Create
+from django.db import models
+
+
+class Alien(models.Model):
+    type = models.CharField(max_length=32)
+    distance_to_galaxy = models.IntegerField()
+    threat = models.IntegerField()
+    speed = models.IntegerField()
+
+
+class Weapon(models.Model):
+    type = models.CharField(max_length=32)
+    quantity = models.IntegerField()
+    power = models.IntegerField()
+    coverage_distance = models.IntegerField()
+
+Для начала создадим оружие для наших героев. Давайте вооружим их красноречием, чтобы убедить инопланетян уйти, и глушителями, чтобы изменить сигналы разведки:
+eloquence = Weapon.objects.create(
+   type='eloquence', power=100, coverage_distance=100, quantity=10
+)
+jammers = Weapon(type='jammer', power=10, coverage_distance=1000, quantity=50)
+jammers.save()
+
+Показаны два метода, чтобы проиллюстрировать, как вы можете создавать новые объекты в базе данных. Создаем красноречие с помощью Диспетчера объектов. У него есть метод create, которому вы можете передать все параметры вашего объекта. Если результат этой операции успешен, вызов сохраняет объект в базе данных и возвращает экземпляр Weaponкласса.
+Второй метод - создать экземпляр класса и затем сохранить его вручную. Эти два метода практически одинаковы, поэтому вы можете использовать то, что вам больше нравится.
+Когда вы создаете экземпляр вручную, объект не будет сохранен в базе данных до тех пор, пока вы не вызовете метод save явно.
+
+
+______
+Delete
+Первый враг пришел из соседней галактики, расположенной всего в 23 солнечных годах от нашей:
+et_alien = Alien.objects.create(type='ET', distance_to_galaxy=23, threat=70, speed=5)
+За пять ходов он пересекает границу, поэтому игрок может использовать красноречие, чтобы обмануть противника и заставить его повернуться в противоположном направлении. Сила красноречия - 100, а угроза - 70, поэтому за один ход игрок может противостоять первому вторжению!
+Он нам больше не нужен et_alien, поэтому удалим его:
+et_alien.delete()
+Метод delete удаляет объект из базы данных, но не удаляет экземпляр класса. Не используйте объект после этой операции, чтобы избежать двусмысленности.
+
+
+_______
+Update
+Следующий враг галактики - Хищник, противник, которого вряд ли можно победить одним движением, поскольку он приходит из глубокого космоса, а наше оружие недостаточно сильное.
+predator = Alien.objects.create(type='Predator', distance_to_galaxy=550, threat=40, speed=30)
+Наши глушилки создают преграду для сигналов в космосе, поэтому противник теряет направление. Игрок применяет это оружие на следующем ходу. Количество постановщиков помех уменьшилось на единицу и одновременно уменьшилась угроза:
+
+jammers.quantity -= 1
+jammers.save()
+
+predator.distance_to_galaxy -= predator.speed
+predator.threat -= jammers.power
+predator.save()
+
+Обновление объекта - это двухэтапная операция. Мы меняем атрибуты объекта, а затем вызываем saveметод, как для ручного создания объекта.
+Атрибуты экземпляра сохраняются только в объекте Python, пока вы не вызовете метод save. Ваш объект не является точной копией строки базы данных в текущий момент, поэтому не забудьте сохранить его, чтобы синхронизировать внесенные вами изменения.
+Еще через три хода игрок побеждает Хищника с помощью глушилок, и он улетает в неизвестном направлении. Звоним predator.delete()и переходим в следующий раунд.
+
+
+
+Мы можем модифицировать каждый объект по своему усмотрению, но помните: инопланетяне могут приходить рой. Можем ли мы применить наше оружие ко всем одновременно? При таком подходе, который мы только что рассмотрели, ответ будет отрицательным. Если бы мы только могли использовать QuerySet для этой задачи ... Хорошая новость в том, что мы, безусловно, можем!
+
+Космических жуков бывает по три штуки:
+for _ in range(3):
+    Alien.objects.create(type='Space Bug', distance_to_galaxy=30, threat=150, speed=12)
+
+На первом ходу игрок применяет красноречие :
+eloquence.quantity -= 1
+eloquence.save()
+
+space_bug = Alien.objects.filter(type='Space Bug').first()
+
+Alien.objects.filter(type='Space Bug').update(
+   distance_to_galaxy=space_bug.distance_to_galaxy - space_bug.speed,
+   threat=space_bug.threat - eloquence.power
+)
+
+Ошибки еще не устранены, но мы обновляем их позицию и угрозу за один вызов, а не за три. Мы получаем диспетчер объектов модели, отфильтровываем объекты, которые нам нужны, и вызываем updateQuerySet. Синтаксис тот же: мы передаем параметры и их новые значения методу, а Django выполняет остальную работу с базой данных.
+
+Наконец, игрок снова применяет красноречие, и жуки убеждают остановить свое вторжение. Мы снова вызываем метод QuerySet:
+
+Alien.objects.filter(type='Space Bug').delete()
+
+
+Хотя метод удаления работает как для объекта, так и для QuerySet, метод обновления определен только для QuerySet. Если вы вызовете метод обновления для объекта, вы получите исключение AttributeError.
+
+__
+Пример удаления выполнненых задач:
+
+class Task(models.Model):
+    description = models.CharField(max_length=256)
+    is_done = models.BooleanField()
+    priority = models.IntegerField()
+
+task_done = Task.objects.filter(is_done=True).delete()
+# for i in task_done:
+#     i.delete()
+
+
+Пример апдейта
+Task.objects.filter(description='call mom').update(priority=100500)
+
+
+
+
+_______________________________
+Сортировка
+sorting data by its attributes
+
+from django.db import models
+
+
+class DayWeather(models.Model):
+    date = models.DateField()
+    precipitation = models.FloatField()
+    temperature = models.FloatField()
+    was_raining = models.BooleanField()
+
+Вам интересно найти 3 самых холодных дня в нашей базе данных? Поищем ответ:
+top_three_coldest_days = DayWeather.objects.order_by('temperature')[:3]
+
+Помните, что упорядочение работает так же, как и сортировка: первое значение - наименьшее, а последнее - наибольшее. Мы вызываем order_byметод диспетчера объектов с температурой в качестве параметра, и он возвращает данные, отсортированные по полю температуры.
+
+Этот метод может применяться для диспетчера объектов или QuerySet; вы можете фильтровать данные, а затем заказывать их или даже выполнять операции агрегирования и отсортировать общий результат.
+
+Как насчет того, чтобы получить из базы данных 3 самых жарких дня?
+top_three_hottest_days = DayWeather.objects.order_by('-temperature')[:3]
+
+Все, что меняется - это добавление минуса к нашему параметру. Знак минус означает обратный порядок. В нашем случае мы сначала получаем самые большие значения температуры.
+
+
+____
+Агрегаты
+
+Простое правило прогнозов погоды состоит в том, что погода завтра будет относительно похожа на погоду сегодня. Мы также знаем, что погода сезонная. Скажем, если мы хотим знать, сколько дней будет дождливым и пасмурным в следующем месяце, мы должны посмотреть, сколько дней шел дождь в том же месяце в прошлом году. Предположим, что у нас есть переменные last_yearи next_month:
+
+raining_days = DayWeather.objects.filter(
+    date__year=last_year, date__month=next_month, was_raining=True
+)
+
+raining_days_forecast = raining_days.count()
+
+Мы создаем QuerySet и вызываем на нем метод count. Мы считаем, что это хорошее приближение - подсчитать количество дождливых дней в том же месяце в прошлом году и основывать наш прогноз на этом числе.
+
+Мы также можем задаться вопросом о средней температуре на следующей неделе. Для этого прогноза анализируем температуру за прошедшую неделю:
+
+from datetime import date, timedelta
+from django.db.models import Avg
+
+query = DayWeather.objects.filter(date__gt=date.today() - timedelta(days=7))
+
+average_temperature = query.aggregate(average=Avg('temperature'))['average']
+
+Мы вызываем aggregateметод и передаем любое настраиваемое имя в качестве параметра. Значение этого параметра - это специальная функция Avg, а параметр Avgфункции - это имя поля, которое мы хотим обработать.
+
+Результатом этой функции является словарь Python {'average': ...}. Мы получаем значение средней температуры по произвольному имени, которое мы выбрали в начале aggregateметода.
+
+
+
+____________
+Группировать по агрегатам
+docs.djangoproject.com/en/2.2/ref/models/querysets/#aggregation-functions
+
+Просматриваем Django функции агрегации и находке Avg, Count, Max, Min, StdDev, Sum, Variance. Мы можем применить любую из этих функций к числовым значениям поля QuerySet.
+
+Другая задача - предсказать общее количество осадков для каждого месяца на год вперед. Должны ли мы создать двенадцать QuerySet и обрабатывать их один за другим? Что ж, это один из способов сделать это; другой - сгруппировать значения по месяцам:
+
+from django.db.models import Sum
+
+precipitation = DayWeather.objects.filter(date__year=last_year) \
+                          .values('date__month') \
+                          .annotate(sum=Sum('precipitation'))
+
+# precipitation is <Queryset [{'date__month': 1, 'sum': ...}, ...]>
+
+Мы делаем запрос и группируем наши значения по valuesметоду вызова месяца и передаем ему поле или поиск по полю. Затем мы вызываем annotateметод; правила синтаксиса для него такие же, как и aggregateв предыдущем примере.
+
+Результатом на этот раз является QuerySet, состоящий из настраиваемых объектов в виде словарей. Мы можем получить доступ к каждому объекту по индексу или преобразовать QuerySet в коллекцию Python и работать с ней, как с любой другой коллекцией.
+
+
+___________
+Функция счета против метода счета
+
+Последний прогноз, который мы хотим сделать, - это количество теплых дней с наружной температурой выше или равной 20 градусам Цельсия в неделю. Снова смотрим значения прошлого года для каждой недели
+
+from django.db.models import Count
+
+warm_days = DayWeather.objects.filter(date__year=last_year) \
+                      .filter(temperature__gte=20) \
+                      .values('date__week') \
+                      .annotate(count=Count('date'))
+
+# warm_days is <Queryset [{'date__week': 1, 'count': ...}, ...]>
+
+Вызов похож на предыдущий, но на этот раз мы передаем функцию Countк annotateметоду.
+Существует разница между функцией Count и методом count в QuerySet. Функция Count возвращает статистику для каждого аннотированного значения; метод возвращает количество элементов во всем QuerySet.
+
+
+
+
